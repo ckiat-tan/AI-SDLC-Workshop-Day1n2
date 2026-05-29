@@ -16,3 +16,7 @@ pnpm-debug.log*
 todos.db
 todos.db-shm
 todos.db-wal
+
+playwright-report
+test-results
+.playwright

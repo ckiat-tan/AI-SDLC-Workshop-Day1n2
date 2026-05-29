@@ -374,7 +374,7 @@ function seedHolidays(): void {
     return;
   }
 
-  const insert = db.prepare('INSERT INTO holidays (date, name) VALUES (?, ?)');
+  const insert = db.prepare('INSERT OR IGNORE INTO holidays (date, name) VALUES (?, ?)');
   const transaction = db.transaction(() => {
     for (const holiday of SINGAPORE_HOLIDAYS) {
       insert.run(holiday.date, holiday.name);
