@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import MainNav from '@/components/MainNav';
 import type { Priority, RecurrencePattern, Tag, Template, Todo } from '@/lib/db';
 import { useNotifications } from '@/lib/hooks/useNotifications';
+import { calculateSubtaskProgress } from '@/lib/progress';
 import { formatSingaporeDate, parseDateTimeLocalToSingaporeISO, toDateTimeLocalFromISO } from '@/lib/timezone';
 
 type TodoFormState = {
@@ -67,15 +68,7 @@ function splitTodosBySection(todos: Todo[]) {
 }
 
 function getProgress(todo: Todo): { completed: number; total: number; percent: number } {
-  const total = todo.subtasks.length;
-  const completed = todo.subtasks.filter((subtask) => subtask.is_completed).length;
-  const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
-
-  return {
-    completed,
-    total,
-    percent,
-  };
+  return calculateSubtaskProgress(todo.subtasks);
 }
 
 function toApiPayload(form: TodoFormState) {

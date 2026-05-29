@@ -4,20 +4,13 @@ import { getSession } from '@/lib/auth';
 import type { Priority, RecurrencePattern } from '@/lib/db';
 import { todoDB } from '@/lib/db';
 import { addRecurrence, isAtLeastOneMinuteInFuture } from '@/lib/timezone';
+import { isValidPriority, isValidRecurrence } from '@/lib/validators/todo';
 
 export const runtime = 'nodejs';
 
 type Params = {
   params: { id: string };
 };
-
-function isValidPriority(value: unknown): value is Priority {
-  return value === 'high' || value === 'medium' || value === 'low';
-}
-
-function isValidRecurrence(value: unknown): value is RecurrencePattern {
-  return value === 'daily' || value === 'weekly' || value === 'monthly' || value === 'yearly';
-}
 
 export async function GET(_request: NextRequest, { params }: Params): Promise<NextResponse> {
   const session = await getSession();

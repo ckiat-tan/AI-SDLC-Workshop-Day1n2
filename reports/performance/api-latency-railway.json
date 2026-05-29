@@ -1,0 +1,63 @@
+{
+  "target": "https://ai-sdlc-workshop-day1n2-production-8d2e.up.railway.app",
+  "startedAt": "2026-05-29T08:32:14.025Z",
+  "completedAt": "2026-05-29T08:33:02.155Z",
+  "runsPerEndpoint": 30,
+  "results": [
+    {
+      "endpoint": "/api/holidays",
+      "runs": 30,
+      "statusCounts": {
+        "401": 30
+      },
+      "minMs": 245.22,
+      "avgMs": 290.89,
+      "p95Ms": 364.79,
+      "maxMs": 674.84
+    },
+    {
+      "endpoint": "/api/auth/me",
+      "runs": 30,
+      "statusCounts": {
+        "401": 30
+      },
+      "minMs": 248.07,
+      "avgMs": 276.62,
+      "p95Ms": 359.51,
+      "maxMs": 459.02
+    },
+    {
+      "endpoint": "/api/todos",
+      "runs": 30,
+      "statusCounts": {
+        "401": 30
+      },
+      "minMs": 245.14,
+      "avgMs": 263.32,
+      "p95Ms": 351.2,
+      "maxMs": 357.71
+    },
+    {
+      "endpoint": "/api/tags",
+      "runs": 30,
+      "statusCounts": {
+        "401": 30
+      },
+      "minMs": 244.64,
+      "avgMs": 259.27,
+      "p95Ms": 267.9,
+      "maxMs": 358.3
+    },
+    {
+      "endpoint": "/api/notifications/check",
+      "runs": 30,
+      "statusCounts": {
+        "401": 30
+      },
+      "minMs": 248.87,
+      "avgMs": 259.65,
+      "p95Ms": 264.62,
+      "maxMs": 355.46
+    }
+  ]
+}

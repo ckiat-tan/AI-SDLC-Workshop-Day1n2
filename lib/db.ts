@@ -213,35 +213,100 @@ function mapTemplateRow(row: Record<string, unknown>): Template {
   };
 }
 
-function getTagsForTodo(todoId: number): Tag[] {
+function getTagsByTodoIds(todoIds: number[]): Map<number, Tag[]> {
+  const grouped = new Map<number, Tag[]>();
+
+  if (todoIds.length === 0) {
+    return grouped;
+  }
+
+  for (const todoId of todoIds) {
+    grouped.set(todoId, []);
+  }
+
+  const placeholders = todoIds.map(() => '?').join(', ');
   const rows = db
     .prepare(
       `
-      SELECT t.*
+      SELECT t.*, tt.todo_id
       FROM tags t
       INNER JOIN todo_tags tt ON tt.tag_id = t.id
-      WHERE tt.todo_id = ?
+      WHERE tt.todo_id IN (${placeholders})
       ORDER BY t.name COLLATE NOCASE ASC
     `,
     )
-    .all(todoId) as Record<string, unknown>[];
+    .all(...todoIds) as Record<string, unknown>[];
 
-  return rows.map(mapTagRow);
+  for (const row of rows) {
+    const todoId = Number(row.todo_id);
+    const tags = grouped.get(todoId);
+    if (!tags) {
+      continue;
+    }
+
+    tags.push(mapTagRow(row));
+  }
+
+  return grouped;
 }
 
-function getSubtasksForTodo(todoId: number): Subtask[] {
+function getSubtasksByTodoIds(todoIds: number[]): Map<number, Subtask[]> {
+  const grouped = new Map<number, Subtask[]>();
+
+  if (todoIds.length === 0) {
+    return grouped;
+  }
+
+  for (const todoId of todoIds) {
+    grouped.set(todoId, []);
+  }
+
+  const placeholders = todoIds.map(() => '?').join(', ');
   const rows = db
     .prepare(
       `
       SELECT *
       FROM subtasks
-      WHERE todo_id = ?
+      WHERE todo_id IN (${placeholders})
       ORDER BY position ASC, id ASC
     `,
     )
-    .all(todoId) as Record<string, unknown>[];
+    .all(...todoIds) as Record<string, unknown>[];
 
-  return rows.map(mapSubtaskRow);
+  for (const row of rows) {
+    const todoId = Number(row.todo_id);
+    const subtasks = grouped.get(todoId);
+    if (!subtasks) {
+      continue;
+    }
+
+    subtasks.push(mapSubtaskRow(row));
+  }
+
+  return grouped;
+}
+
+function hydrateTodos(rows: Record<string, unknown>[]): Todo[] {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const todoIds = rows.map((row) => Number(row.id));
+  const tagsByTodoId = getTagsByTodoIds(todoIds);
+  const subtasksByTodoId = getSubtasksByTodoIds(todoIds);
+
+  return rows.map((row) => {
+    const todoId = Number(row.id);
+    return mapTodoRow(row, tagsByTodoId.get(todoId) ?? [], subtasksByTodoId.get(todoId) ?? []);
+  });
+}
+
+function getTagsForTodo(todoId: number): Tag[] {
+  return getTagsByTodoIds([todoId]).get(todoId) ?? [];
+}
+
+function getSubtasksForTodo(todoId: number): Subtask[] {
+  return getSubtasksByTodoIds([todoId]).get(todoId) ?? [];
 }
 
 function getTodoRowById(userId: number, todoId: number): Record<string, unknown> | null {
@@ -259,8 +324,7 @@ function getTodoRowById(userId: number, todoId: number): Record<string, unknown>
 }
 
 function hydrateTodo(row: Record<string, unknown>): Todo {
-  const todoId = Number(row.id);
-  return mapTodoRow(row, getTagsForTodo(todoId), getSubtasksForTodo(todoId));
+  return hydrateTodos([row])[0];
 }
 
 function ensureSchema(): void {
@@ -351,6 +415,15 @@ function ensureSchema(): void {
       date TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL
     );
+
+    CREATE INDEX IF NOT EXISTS idx_authenticators_user_id ON authenticators(user_id);
+    CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id);
+    CREATE INDEX IF NOT EXISTS idx_todos_user_completed_due ON todos(user_id, is_completed, due_date);
+    CREATE INDEX IF NOT EXISTS idx_subtasks_todo_id ON subtasks(todo_id);
+    CREATE INDEX IF NOT EXISTS idx_tags_user_id ON tags(user_id);
+    CREATE INDEX IF NOT EXISTS idx_templates_user_id ON templates(user_id);
+    CREATE INDEX IF NOT EXISTS idx_todo_tags_todo_id ON todo_tags(todo_id);
+    CREATE INDEX IF NOT EXISTS idx_todo_tags_tag_id ON todo_tags(tag_id);
   `);
 }
 
@@ -546,7 +619,7 @@ export const todoDB = {
       )
       .all(userId) as Record<string, unknown>[];
 
-    return rows.map((row) => hydrateTodo(row));
+    return hydrateTodos(rows);
   },
 
   getById(userId: number, todoId: number): Todo | null {
@@ -722,7 +795,7 @@ export const todoDB = {
       )
       .all(userId) as Record<string, unknown>[];
 
-    return rows.map((row) => hydrateTodo(row));
+    return hydrateTodos(rows);
   },
 
   markNotificationSent(userId: number, todoId: number, sentAt: string): void {

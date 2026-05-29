@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getSession } from '@/lib/auth';
-import type { ExportPayload } from '@/lib/db';
 import { todoDB } from '@/lib/db';
+import { validateExportPayload } from '@/lib/validators/import';
 
 export const runtime = 'nodejs';
-
-function isValidPayload(value: unknown): value is ExportPayload {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const payload = value as Record<string, unknown>;
-
-  return (
-    typeof payload.version === 'string' &&
-    Array.isArray(payload.todos) &&
-    Array.isArray(payload.subtasks) &&
-    Array.isArray(payload.tags) &&
-    Array.isArray(payload.todoTags)
-  );
-}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const session = await getSession();
@@ -36,17 +20,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON file' }, { status: 400 });
   }
 
-  if (!isValidPayload(payload)) {
+  const validation = validateExportPayload(payload);
+  if (!validation.ok) {
     return NextResponse.json(
       {
-        error: 'Invalid import format. Expected fields: version, todos, subtasks, tags, todoTags',
+        error: validation.error,
       },
       { status: 400 },
     );
   }
 
   try {
-    const counts = todoDB.import(session.userId, payload);
+    const counts = todoDB.import(session.userId, validation.payload);
 
     return NextResponse.json({
       ok: true,
